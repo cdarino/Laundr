@@ -8,9 +8,7 @@ import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.function.Consumer;
-
 import javax.swing.*;
-import javax.swing.border.MatteBorder;
 
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.creators.roundedPanel;
@@ -28,6 +26,7 @@ public class LaundromatCard extends roundedPanel {
     private final JLabel distanceLabel;
     private final JLabel deliveryLabel;
     private final TopRoundedImagePanel imagePanel;
+    private final BottomRoundedPanel roundedBottom;
 
     public LaundromatCard(LaundromatData data, Consumer<LaundromatData> onSelect) {
         super(CARD_RADIUS);
@@ -39,7 +38,8 @@ public class LaundromatCard extends roundedPanel {
         bottomPanel = new JPanel(new GridLayout(1, 2));
         leftPanel = new JPanel(new BorderLayout());
         rightPanel = new JPanel(new GridBagLayout());
-        imagePanel = new TopRoundedImagePanel(data.imagePath, 10, 3, getLightModeBlue());
+        imagePanel = new TopRoundedImagePanel(data.imagePath, 8);
+        roundedBottom = new BottomRoundedPanel(10);
 
         setupLayout(data, onSelect);
         applyThemeStyling();
@@ -55,85 +55,98 @@ public class LaundromatCard extends roundedPanel {
     }
 
     private void setupLayout(LaundromatData data, Consumer<LaundromatData> onSelect) {
-        setAlignmentX(Component.CENTER_ALIGNMENT);
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, 320));
-        setPreferredSize(new Dimension(0, 320));
+    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS)); // ✅ respects preferred heights
+    setAlignmentX(Component.CENTER_ALIGNMENT);
+    setOpaque(false);
 
-        imagePanel.setPreferredSize(new Dimension(0, IMAGE_HEIGHT));
-        imagePanel.setOpaque(false);
-        add(imagePanel, BorderLayout.NORTH);
+    // === Image section ===
+    imagePanel.setPreferredSize(new Dimension(0, IMAGE_HEIGHT));
+    imagePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, IMAGE_HEIGHT));
+    imagePanel.setOpaque(false);
+    add(imagePanel);
 
-        // === Bottom section ===
-        bottomPanel.setOpaque(true);
-        bottomPanel.setPreferredSize(new Dimension(0, 60));
-        bottomPanel.setBorder(new MatteBorder(0, 0, 0, 0, getLightModeBlue()));
+    // === Bottom section ===
+    bottomPanel.setOpaque(true);
+    bottomPanel.setLayout(new GridLayout(1, 2, 0, 0));
 
-        // Left panel (name)
-        leftPanel.setOpaque(false);
-        leftPanel.setBorder(new MatteBorder(0, 3, 3, 2, getLightModeBlue()));
+    // Left panel (name)
+    leftPanel.setOpaque(false);
+    nameLabel.setFont(UIManager.getFont("Label.font").deriveFont(Font.BOLD, 15.5f));
+    nameLabel.setHorizontalAlignment(SwingConstants.LEFT);
+    nameLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-        nameLabel.setFont(UIManager.getFont("Label.font").deriveFont(Font.BOLD, 15.5f));
-        nameLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        nameLabel.setVerticalAlignment(SwingConstants.CENTER);
+    JPanel nameHolder = new JPanel(new BorderLayout());
+    nameHolder.setOpaque(false);
+    nameHolder.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
+    nameHolder.add(nameLabel, BorderLayout.CENTER);
+    leftPanel.add(nameHolder, BorderLayout.CENTER);
 
-        JPanel nameHolder = new JPanel(new BorderLayout());
-        nameHolder.setOpaque(false);
-        nameHolder.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
-        nameHolder.add(nameLabel, BorderLayout.CENTER);
-        leftPanel.add(nameHolder, BorderLayout.CENTER);
+    // Right panel (distance + delivery)
+    rightPanel.setOpaque(false);
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.insets = new Insets(1, 0, 1, 0);
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.weightx = 1.0;
 
-        // Right panel (distance + delivery)
-        rightPanel.setOpaque(false);
-        rightPanel.setBorder(new MatteBorder(0, 2, 3, 3, getLightModeBlue()));
+    JLabel distIcon = new JLabel(iconCreator.getIcon("Icons/distancefromUser.svg", 16, 16));
+    JLabel periodIcon = new JLabel(iconCreator.getIcon("Icons/deliveryperiod.svg", 16, 16));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(1, 0, 1, 0);
-        gbc.anchor = GridBagConstraints.WEST; // ✅ restore left alignment
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
+    JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    row1.setOpaque(false);
+    row1.add(distIcon);
+    row1.add(distanceLabel);
 
-        JLabel distIcon = new JLabel(iconCreator.getIcon("Icons/distancefromUser.svg", 16, 16));
-        JLabel periodIcon = new JLabel(iconCreator.getIcon("Icons/deliveryperiod.svg", 16, 16));
+    JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+    row2.setOpaque(false);
+    row2.add(periodIcon);
+    row2.add(deliveryLabel);
 
-        JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        row1.setOpaque(false);
-        row1.add(distIcon);
-        row1.add(distanceLabel);
+    rightPanel.add(row1, gbc);
+    gbc.gridy++;
+    rightPanel.add(row2, gbc);
 
-        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        row2.setOpaque(false);
-        row2.add(periodIcon);
-        row2.add(deliveryLabel);
+    bottomPanel.add(leftPanel);
+    bottomPanel.add(rightPanel);
 
-        rightPanel.add(row1, gbc);
-        gbc.gridy++;
-        rightPanel.add(row2, gbc);
+    // Wrap bottom panel for fixed height control
+    JPanel bottomWrapper = new JPanel(new BorderLayout());
+    bottomWrapper.setOpaque(false);
 
-        bottomPanel.add(leftPanel);
-        bottomPanel.add(rightPanel);
-        add(bottomPanel, BorderLayout.CENTER);
+    int bottomHeight = 50; // ✅ freely change this — e.g. 72, 64, etc.
+    bottomWrapper.setPreferredSize(new Dimension(0, bottomHeight));
+    bottomWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, bottomHeight));
+    bottomWrapper.add(bottomPanel, BorderLayout.CENTER);
 
-        // === Hover effects ===
-        addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                onSelect.accept(data);
-            }
+    // Rounded bottom section
+    roundedBottom.setLayout(new BorderLayout());
+    roundedBottom.add(bottomWrapper, BorderLayout.CENTER);
+    roundedBottom.setOpaque(false);
+    add(roundedBottom);
 
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                setBackground(UIManager.getColor("Sidebar.hoverBackground"));
-                bottomPanel.setBackground(UIManager.getColor("Sidebar.hoverBackground"));
-            }
+    // === Hover effects ===
+    addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            onSelect.accept(data);
+        }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                applyThemeStyling();
-            }
-        });
-    }
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            setBackground(UIManager.getColor("Sidebar.hoverBackground"));
+            bottomPanel.setBackground(UIManager.getColor("Sidebar.hoverBackground"));
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+            applyThemeStyling();
+        }
+    });
+}
+
+
 
     private void applyThemeStyling() {
         boolean dark = isDarkTheme();
@@ -149,10 +162,15 @@ public class LaundromatCard extends roundedPanel {
         distanceLabel.setForeground(textColor);
         deliveryLabel.setForeground(textColor);
 
-        setBorder(new roundedBorder(CARD_RADIUS, borderColor, 2));
-        leftPanel.setBorder(new MatteBorder(0, 3, 3, 2, borderColor));
-        rightPanel.setBorder(new MatteBorder(0, 2, 3, 3, borderColor));
+        // Outer border
+        setBorder(new roundedBorder(CARD_RADIUS, borderColor, 4));
 
+        // Reintroduce divider between left/right panels
+        bottomPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 0, bottomBg));
+        leftPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 3, borderColor));
+
+        // Add separator between image and bottom section
+        imagePanel.setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, borderColor));
         imagePanel.setBorderColor(borderColor);
         imagePanel.repaint();
 
@@ -160,6 +178,7 @@ public class LaundromatCard extends roundedPanel {
         repaint();
     }
 
+    // === Utility methods ===
     private static Color getLightModeBlue() {
         Color c = UIManager.getColor("Component.accentColor");
         if (c == null) c = UIManager.getColor("Actions.Blue");
@@ -180,19 +199,17 @@ public class LaundromatCard extends roundedPanel {
         return luminance < 128;
     }
 
+    // === Top-Rounded Image Panel ===
     private static class TopRoundedImagePanel extends JPanel {
         private final String imagePath;
         private final int radius;
-        private final int borderThickness;
         private Color borderColor;
         private Image baseImage;
         private Image lastRendered;
 
-        TopRoundedImagePanel(String imagePath, int radius, int borderThickness, Color borderColor) {
+        TopRoundedImagePanel(String imagePath, int radius) {
             this.imagePath = imagePath;
             this.radius = radius;
-            this.borderThickness = borderThickness;
-            this.borderColor = borderColor;
             setOpaque(false);
 
             Icon raw = iconCreator.getIcon(imagePath, 360, IMAGE_HEIGHT);
@@ -250,16 +267,8 @@ public class LaundromatCard extends roundedPanel {
             Shape clip = createTopRoundedClip(w, h, radius);
             g2.setClip(clip);
             g2.drawImage(scaled, -x, -y, null);
-            g2.setClip(null);
-
-            if (borderThickness > 0) {
-                g2.setStroke(new BasicStroke(borderThickness));
-                g2.setColor(borderColor);
-                Shape borderShape = createTopRoundedClip(w - borderThickness, h - borderThickness, radius);
-                AffineTransform at = AffineTransform.getTranslateInstance(borderThickness / 2.0, borderThickness / 2.0);
-                g2.draw(at.createTransformedShape(borderShape));
-            }
             g2.dispose();
+
             lastRendered = out;
         }
 
@@ -279,6 +288,39 @@ public class LaundromatCard extends roundedPanel {
             path.quadTo(width, 0, width, radius);
             path.lineTo(width, height);
             path.lineTo(0, height);
+            path.closePath();
+            return path;
+        }
+    }
+
+    // === Bottom-Rounded Wrapper Panel ===
+    private static class BottomRoundedPanel extends JPanel {
+        private final int radius;
+
+        BottomRoundedPanel(int radius) {
+            this.radius = radius;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            Shape clip = createBottomRoundedClip(getWidth(), getHeight(), radius);
+            g2.setClip(clip);
+            super.paintComponent(g2);
+            g2.dispose();
+        }
+
+        private Shape createBottomRoundedClip(int width, int height, int r) {
+            int radius = Math.max(0, Math.min(r, Math.min(width / 2, height / 2)));
+            Path2D path = new Path2D.Double();
+            path.moveTo(0, 0);
+            path.lineTo(width, 0);
+            path.lineTo(width, height - radius);
+            path.quadTo(width, height, width - radius, height);
+            path.lineTo(radius, height);
+            path.quadTo(0, height, 0, height - radius);
             path.closePath();
             return path;
         }
